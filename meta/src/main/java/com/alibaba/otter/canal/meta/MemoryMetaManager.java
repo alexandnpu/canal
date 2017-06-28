@@ -16,6 +16,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MigrateMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * 内存版实现
@@ -24,7 +26,7 @@ import com.google.common.collect.MigrateMap;
  * @version 1.0.0
  */
 public class MemoryMetaManager extends AbstractCanalLifeCycle implements CanalMetaManager {
-
+    private static final Logger logger = LoggerFactory.getLogger(MemoryMetaManager.class);
     protected Map<String, List<ClientIdentity>>              destinations;
     protected Map<ClientIdentity, MemoryClientIdentityBatch> batches;
     protected Map<ClientIdentity, Position>                  cursors;
@@ -66,8 +68,8 @@ public class MemoryMetaManager extends AbstractCanalLifeCycle implements CanalMe
         if (clientIdentitys.contains(clientIdentity)) {
             clientIdentitys.remove(clientIdentity);
         }
-
         clientIdentitys.add(clientIdentity);
+        logger.debug("{} has been added", clientIdentity.toString());
     }
 
     public synchronized boolean hasSubscribe(ClientIdentity clientIdentity) throws CanalMetaManagerException {
@@ -79,6 +81,7 @@ public class MemoryMetaManager extends AbstractCanalLifeCycle implements CanalMe
         List<ClientIdentity> clientIdentitys = destinations.get(clientIdentity.getDestination());
         if (clientIdentitys != null && clientIdentitys.contains(clientIdentity)) {
             clientIdentitys.remove(clientIdentity);
+            logger.debug("{} has been removed", clientIdentity.toString());
         }
     }
 
@@ -92,19 +95,25 @@ public class MemoryMetaManager extends AbstractCanalLifeCycle implements CanalMe
 
     public void updateCursor(ClientIdentity clientIdentity, Position position) throws CanalMetaManagerException {
         cursors.put(clientIdentity, position);
+        logger.debug("cursor has been updated, client:{}, position:{}", clientIdentity.toString(), position.toString());
     }
 
     public Long addBatch(ClientIdentity clientIdentity, PositionRange positionRange) throws CanalMetaManagerException {
-        return batches.get(clientIdentity).addPositionRange(positionRange);
+        Long result = batches.get(clientIdentity).addPositionRange(positionRange);
+        logger.debug("batch added client:{}, position:{}, batch:{}", clientIdentity.toString(), positionRange.toString(), result.toString());
+        return result;
     }
 
     public void addBatch(ClientIdentity clientIdentity, PositionRange positionRange, Long batchId)
                                                                                                   throws CanalMetaManagerException {
         batches.get(clientIdentity).addPositionRange(positionRange, batchId);// 添加记录到指定batchId
+        logger.debug("batch added with batchId:{}, client:{}, position:{}", batchId.toString(), clientIdentity.toString(), positionRange.toString());
     }
 
     public PositionRange removeBatch(ClientIdentity clientIdentity, Long batchId) throws CanalMetaManagerException {
-        return batches.get(clientIdentity).removePositionRange(batchId);
+        PositionRange pr = batches.get(clientIdentity).removePositionRange(batchId);
+        logger.debug("batch removed, client:{}, batchId:{}", clientIdentity.toString(), batchId.toString());
+        return pr;
     }
 
     public PositionRange getBatch(ClientIdentity clientIdentity, Long batchId) throws CanalMetaManagerException {
@@ -125,6 +134,7 @@ public class MemoryMetaManager extends AbstractCanalLifeCycle implements CanalMe
 
     public void clearAllBatchs(ClientIdentity clientIdentity) throws CanalMetaManagerException {
         batches.get(clientIdentity).clearPositionRanges();
+        logger.debug("all batch has been cleared, client:{}", clientIdentity.toString());
     }
 
     // ============================
